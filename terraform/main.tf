@@ -138,18 +138,7 @@ resource "aws_cloudwatch_log_group" "ecs_log_group" {
   retention_in_days = 7
 }
 
-# 🔟 ECR Repository
-resource "aws_ecr_repository" "flask_repo" {
-  name = var.app_name
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  image_tag_mutability = "MUTABLE"
-}
-
-# 1️⃣1️⃣ ECS Task Definition
+# 1️0 ECS Task Definition
 resource "aws_ecs_task_definition" "task_def" {
   family                   = "flask-task-def"
   network_mode             = "awsvpc"
