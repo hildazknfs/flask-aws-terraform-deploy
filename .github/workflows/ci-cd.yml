@@ -35,8 +35,8 @@ jobs:
         run: terraform init
 
       - name: Terraform Apply ECR
-      working-directory: ./terraform
-       run: |
+        working-directory: ./terraform
+        run: |
           terraform apply -target=aws_ecr_repository.flask_repo -auto-approve -input=false
 
 
