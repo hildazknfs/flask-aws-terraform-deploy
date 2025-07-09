@@ -1,6 +1,15 @@
 data "aws_availability_zones" "available" {}
 
-# 1️⃣ VPC
+resource "aws_ecr_repository" "flask_repo" {
+  name = var.app_name
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  image_tag_mutability = "MUTABLE"
+}
+
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 
@@ -9,7 +18,6 @@ resource "aws_vpc" "main" {
   }
 }
 
-# 2️⃣ Subnets
 resource "aws_subnet" "subnet" {
   count             = 2
   vpc_id            = aws_vpc.main.id
@@ -21,12 +29,10 @@ resource "aws_subnet" "subnet" {
   }
 }
 
-# 3️⃣ Internet Gateway
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
 }
 
-# 4️⃣ Route Table
 resource "aws_route_table" "route_table" {
   vpc_id = aws_vpc.main.id
 
@@ -42,7 +48,6 @@ resource "aws_route_table_association" "assoc" {
   route_table_id = aws_route_table.route_table.id
 }
 
-# 5️⃣ Security Group
 resource "aws_security_group" "sg" {
   name        = "flask-aws-sg"
   description = "Allow HTTP and ECS"
@@ -70,7 +75,6 @@ resource "aws_security_group" "sg" {
   }
 }
 
-# 6️⃣ Load Balancer
 resource "aws_lb" "app_lb" {
   name               = "flask-app-lb"
   internal           = false
@@ -106,12 +110,10 @@ resource "aws_lb_listener" "listener" {
   }
 }
 
-# 7️⃣ ECS Cluster
 resource "aws_ecs_cluster" "ecs_cluster" {
   name = "flask-app-cluster"
 }
 
-# 8️⃣ IAM Role for ECS Task Execution
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "ecsTaskExecutionRole"
 
@@ -132,13 +134,11 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# 9️⃣ CloudWatch Logs
 resource "aws_cloudwatch_log_group" "ecs_log_group" {
   name              = "/ecs/flask-app"
   retention_in_days = 7
 }
 
-# 1️0 ECS Task Definition
 resource "aws_ecs_task_definition" "task_def" {
   family                   = "flask-task-def"
   network_mode             = "awsvpc"
@@ -149,7 +149,7 @@ resource "aws_ecs_task_definition" "task_def" {
 
   container_definitions = jsonencode([{
     name      = "flask-container"
-    image     = "${var.aws_account_id}.dkr.ecr.ap-southeast-1.amazonaws.com/${var.app_name}:latest"
+    image     = "${var.aws_account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.app_name}:latest"
     essential = true
     portMappings = [{
       containerPort = var.container_port
@@ -159,14 +159,13 @@ resource "aws_ecs_task_definition" "task_def" {
       logDriver = "awslogs",
       options = {
         awslogs-group         = aws_cloudwatch_log_group.ecs_log_group.name
-        awslogs-region        = "ap-southeast-1"
+        awslogs-region        = var.aws_region
         awslogs-stream-prefix = "ecs"
       }
     }
   }])
 }
 
-# 1️⃣2️⃣ ECS Service
 resource "aws_ecs_service" "ecs_service" {
   name            = "flask-ecs-service"
   cluster         = aws_ecs_cluster.ecs_cluster.id
