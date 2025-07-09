@@ -1,9 +1,3 @@
-variable "aws_region" {
-  default = "ap-southeast-1"
-}
-
-variable "aws_account_id" {}
-
 variable "app_name" {
   default = "flask-aws-terraform"
 }
@@ -14,4 +8,10 @@ variable "container_port" {
 
 variable "desired_count" {
   default = 1
+}
+
+variable "aws_account_id" {}
+
+variable "aws_region" {
+  default = "ap-southeast-1"
 }

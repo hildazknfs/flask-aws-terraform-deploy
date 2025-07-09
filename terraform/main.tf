@@ -1,5 +1,3 @@
-data "aws_availability_zones" "available" {}
-
 resource "aws_ecr_repository" "flask_repo" {
   name = var.app_name
 
@@ -10,12 +8,10 @@ resource "aws_ecr_repository" "flask_repo" {
   image_tag_mutability = "MUTABLE"
 }
 
+data "aws_availability_zones" "available" {}
+
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
-
-  tags = {
-    Name = "flask-aws-vpc"
-  }
 }
 
 resource "aws_subnet" "subnet" {
@@ -23,10 +19,6 @@ resource "aws_subnet" "subnet" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
   availability_zone = data.aws_availability_zones.available.names[count.index]
-
-  tags = {
-    Name = "flask-aws-subnet-${count.index}"
-  }
 }
 
 resource "aws_internet_gateway" "igw" {
@@ -50,7 +42,6 @@ resource "aws_route_table_association" "assoc" {
 
 resource "aws_security_group" "sg" {
   name        = "flask-aws-sg"
-  description = "Allow HTTP and ECS"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -115,7 +106,7 @@ resource "aws_ecs_cluster" "ecs_cluster" {
 }
 
 resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "ecsTaskExecutionRole"
+  name = "ecsTaskExecutionRole-${var.app_name}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -135,12 +126,12 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
 }
 
 resource "aws_cloudwatch_log_group" "ecs_log_group" {
-  name              = "/ecs/flask-app"
+  name              = "/ecs/${var.app_name}"
   retention_in_days = 7
 }
 
 resource "aws_ecs_task_definition" "task_def" {
-  family                   = "flask-task-def"
+  family                   = "${var.app_name}-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
@@ -167,7 +158,7 @@ resource "aws_ecs_task_definition" "task_def" {
 }
 
 resource "aws_ecs_service" "ecs_service" {
-  name            = "flask-ecs-service"
+  name            = "${var.app_name}-service"
   cluster         = aws_ecs_cluster.ecs_cluster.id
   task_definition = aws_ecs_task_definition.task_def.arn
   desired_count   = var.desired_count

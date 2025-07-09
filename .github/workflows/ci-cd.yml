@@ -10,6 +10,7 @@ env:
   ECR_REPO_NAME: ${{ secrets.ECR_REPOSITORY }}
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   IMAGE_TAG: latest
+  TF_VAR_aws_account_id: ${{ secrets.AWS_ACCOUNT_ID }}
 
 jobs:
   deploy:
@@ -26,11 +27,24 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ secrets.AWS_REGION }}
 
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push Docker image
+      run: |
+        docker build -t $ECR_REPO_NAME:$IMAGE_TAG .
+        docker tag $ECR_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME:$IMAGE_TAG
+        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME:$IMAGE_TAG
+
     - name: Set up Terraform
-      uses: hashicorp/setup-terraform@v2
+      uses: hashicorp/setup-terraform@v3
 
     - name: Terraform Init
       run: terraform init
+      working-directory: ./terraform
+
+    - name: Terraform Format Check
+      run: terraform fmt -check
       working-directory: ./terraform
 
     - name: Terraform Plan
@@ -40,12 +54,3 @@ jobs:
     - name: Terraform Apply
       run: terraform apply -auto-approve
       working-directory: ./terraform
-
-    - name: Login to Amazon ECR
-      uses: aws-actions/amazon-ecr-login@v2
-
-    - name: Build, tag, and push Docker image
-      run: |
-        docker build -t $ECR_REPO_NAME:$IMAGE_TAG .
-        docker tag $ECR_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME:$IMAGE_TAG
-        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME:$IMAGE_TAG
