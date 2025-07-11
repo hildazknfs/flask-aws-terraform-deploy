@@ -1,4 +1,4 @@
-name: Deploy Flask App to AWS ECS
+name: CI/CD AWS Flask Pipeline
 
 on:
   push:
@@ -7,50 +7,58 @@ on:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REPO_NAME: ${{ secrets.ECR_REPOSITORY }}
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  IMAGE_TAG: latest
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  IMAGE_TAG: ${{ secrets.IMAGE_TAG }}
   TF_VAR_aws_account_id: ${{ secrets.AWS_ACCOUNT_ID }}
+  TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+  TF_VAR_app_name: ${{ secrets.ECR_REPOSITORY }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Login to Amazon ECR
-      uses: aws-actions/amazon-ecr-login@v2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-    - name: Build, tag, and push Docker image
-      run: |
-        docker build -t $ECR_REPO_NAME:$IMAGE_TAG .
-        docker tag $ECR_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME:$IMAGE_TAG
-        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME:$IMAGE_TAG
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
 
-    - name: Set up Terraform
-      uses: hashicorp/setup-terraform@v3
+      - name: Terraform Plan
+        working-directory: ./terraform
+        run: terraform plan
 
-    - name: Terraform Init
-      run: terraform init
-      working-directory: ./terraform
+      - name: Terraform Apply (Create Infra + ECR)
+        working-directory: ./terraform
+        run: terraform apply -auto-approve
 
-    - name: Terraform Format Check
-      run: terraform fmt -check
-      working-directory: ./terraform
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Terraform Plan
-      run: terraform plan
-      working-directory: ./terraform
+      - name: Build, Tag, and Push Docker Image
+        run: |
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REPOSITORY:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
 
-    - name: Terraform Apply
-      run: terraform apply -auto-approve
-      working-directory: ./terraform
+      - name: Terraform Apply (Trigger ECS Deployment with New Image)
+        working-directory: ./terraform
+        run: terraform apply -auto-approve
+
+      - name: Get Load Balancer URL
+        working-directory: ./terraform
+        run: terraform output

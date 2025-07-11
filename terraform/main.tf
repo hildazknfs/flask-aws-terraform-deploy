@@ -1,3 +1,7 @@
+provider "aws" {
+  region = var.aws_region
+}
+
 resource "aws_ecr_repository" "flask_repo" {
   name = var.app_name
 
@@ -41,8 +45,8 @@ resource "aws_route_table_association" "assoc" {
 }
 
 resource "aws_security_group" "sg" {
-  name        = "flask-aws-sg"
-  vpc_id      = aws_vpc.main.id
+  name   = "flask-aws-sg"
+  vpc_id = aws_vpc.main.id
 
   ingress {
     from_port   = 5000
@@ -140,7 +144,7 @@ resource "aws_ecs_task_definition" "task_def" {
 
   container_definitions = jsonencode([{
     name      = "flask-container"
-    image     = "${var.aws_account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.app_name}:latest"
+    image     = "${var.aws_account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.app_name}:${var.image_tag}"
     essential = true
     portMappings = [{
       containerPort = var.container_port
@@ -149,8 +153,8 @@ resource "aws_ecs_task_definition" "task_def" {
     logConfiguration = {
       logDriver = "awslogs",
       options = {
-        awslogs-group         = aws_cloudwatch_log_group.ecs_log_group.name
-        awslogs-region        = var.aws_region
+        awslogs-group         = aws_cloudwatch_log_group.ecs_log_group.name,
+        awslogs-region        = var.aws_region,
         awslogs-stream-prefix = "ecs"
       }
     }
@@ -177,4 +181,8 @@ resource "aws_ecs_service" "ecs_service" {
   }
 
   depends_on = [aws_lb_listener.listener]
+}
+
+output "load_balancer_dns" {
+  value = aws_lb.app_lb.dns_name
 }

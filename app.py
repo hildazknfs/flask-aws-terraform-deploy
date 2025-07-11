@@ -2,11 +2,13 @@ from flask import Flask
 
 app = Flask(__name__)
 
+@app.route('/')
+def home():
+    return 'Hello from Flask on ECS Fargate!'
 
-@app.route("/health")
+@app.route('/health')
 def health():
-    return {"status": "ok"}
+    return 'OK', 200
 
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)

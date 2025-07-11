@@ -1,5 +1,5 @@
 variable "app_name" {
-  default = "flask-aws-terraform"
+  description = "Name of the application and ECR repo"
 }
 
 variable "container_port" {
@@ -12,6 +12,8 @@ variable "desired_count" {
 
 variable "aws_account_id" {}
 
-variable "aws_region" {
-  default = "ap-southeast-1"
+variable "aws_region" {}
+
+variable "image_tag" {
+  default = "latest"
 }
