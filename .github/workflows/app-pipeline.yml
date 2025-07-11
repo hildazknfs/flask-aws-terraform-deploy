@@ -43,6 +43,16 @@ jobs:
         with:
           terraform_version: 1.7.5
 
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
       - name: Terraform Apply (Update ECS)
         working-directory: ./terraform
-        run: terraform apply -auto-approve -var="aws_account_id=$AWS_ACCOUNT_ID" -var="image_tag=$IMAGE_TAG"
+        run: |
+          terraform apply -auto-approve \
+            -var="aws_account_id=${{ secrets.AWS_ACCOUNT_ID }}" \
+            -var="vpc_id=${{ secrets.VPC_ID }}" \
+            -var="subnet_ids=${{ secrets.SUBNET_IDS }}" \
+            -var="app_port=${{ secrets.APP_PORT }}" \
+            -var="image_tag=$IMAGE_TAG"

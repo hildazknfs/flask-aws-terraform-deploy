@@ -33,4 +33,9 @@ jobs:
 
       - name: Terraform Apply
         working-directory: ./terraform
-        run: terraform apply -auto-approve -var="aws_account_id=${{ secrets.AWS_ACCOUNT_ID }}"
+        run: |
+          terraform apply -auto-approve \
+            -var="aws_account_id=${{ secrets.AWS_ACCOUNT_ID }}" \
+            -var="vpc_id=${{ secrets.VPC_ID }}" \
+            -var="subnet_ids=${{ secrets.SUBNET_IDS }}" \
+            -var="app_port=${{ secrets.APP_PORT }}"

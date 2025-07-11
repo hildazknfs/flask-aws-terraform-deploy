@@ -1,5 +1,10 @@
 resource "aws_ecr_repository" "flask_repo" {
   name = var.ecr_repository
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [image_tag_mutability, image_scanning_configuration]
+  }
 }
 
 resource "aws_ecs_cluster" "flask_cluster" {
@@ -12,8 +17,7 @@ resource "aws_ecs_task_definition" "flask_task" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
   memory                   = "512"
-
-  execution_role_arn = aws_iam_role.ecs_task_execution_role.arn
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
 
   container_definitions = jsonencode([
     {
@@ -22,8 +26,9 @@ resource "aws_ecs_task_definition" "flask_task" {
       essential = true
       portMappings = [
         {
-          containerPort = 5000
-          hostPort      = 5000
+          containerPort = var.app_port
+          hostPort      = var.app_port
+          protocol      = "tcp"
         }
       ]
     }
@@ -54,12 +59,12 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
 resource "aws_security_group" "flask_sg" {
   name        = "flask-sg"
   description = "Allow HTTP inbound traffic"
-  vpc_id      = "vpc-xxxxxx" # ganti sesuai VPC kamu
+  vpc_id      = var.vpc_id
 
   ingress {
-    description = "HTTP"
-    from_port   = 5000
-    to_port     = 5000
+    description = "Allow HTTP"
+    from_port   = var.app_port
+    to_port     = var.app_port
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -80,7 +85,7 @@ resource "aws_ecs_service" "flask_service" {
   desired_count   = 1
 
   network_configuration {
-    subnets          = ["subnet-xxxxxx"] # ganti sesuai subnet kamu
+    subnets          = var.subnet_ids
     security_groups  = [aws_security_group.flask_sg.id]
     assign_public_ip = true
   }

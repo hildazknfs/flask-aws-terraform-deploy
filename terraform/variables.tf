@@ -1,18 +1,19 @@
-variable "aws_region" {
-  type    = string
-  default = "ap-southeast-1"
-}
-
-variable "aws_account_id" {
+variable "ecr_repository" {
   type = string
 }
 
-variable "ecr_repository" {
-  type    = string
-  default = "flask-ecs-fargate-repo"
+variable "image_tag" {
+  type = string
 }
 
-variable "image_tag" {
-  type    = string
-  default = ""
+variable "vpc_id" {
+  type = string
+}
+
+variable "subnet_ids" {
+  type = list(string)
+}
+
+variable "app_port" {
+  type = number
 }
