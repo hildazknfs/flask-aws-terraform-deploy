@@ -1,19 +1,18 @@
-variable "app_name" {
-  description = "Name of the application and ECR repo"
+variable "aws_region" {
+  type        = string
+  default     = "ap-southeast-1"
 }
 
-variable "container_port" {
-  default = 5000
+variable "aws_account_id" {
+  type = string
 }
 
-variable "desired_count" {
-  default = 1
+variable "ecr_repository" {
+  type    = string
+  default = "flask-ecs-fargate-repo"
 }
-
-variable "aws_account_id" {}
-
-variable "aws_region" {}
 
 variable "image_tag" {
+  type    = string
   default = "latest"
 }
