@@ -3,7 +3,7 @@ name: Deploy Flask App
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - 'app/**'
 
